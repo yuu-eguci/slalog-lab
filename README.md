@@ -1,7 +1,7 @@
 Slalog Lab
 ===
 
-📝 Slack + Export logs + Python 3.10 | Slack からエクスポートしたログを Python で整理するスクリプトだよ
+📝 Slack + Export logs + Python 3.10 | Slack + Python の実験的スクリプトを保管するリポジトリだよ
 
 ## Interpret logs
 

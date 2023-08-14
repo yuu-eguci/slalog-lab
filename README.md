@@ -13,9 +13,9 @@ Import logs
 Interpret logs
 
 ```bash
-pipevn run python import_users.py
-pipevn run python import_channels.py
-pipevn run python import_messages.py
+pipenv run python import_users.py
+pipenv run python import_channels.py
+pipenv run python import_messages.py
 ```
 
 ## Linting

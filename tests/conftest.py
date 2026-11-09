@@ -11,9 +11,8 @@ type WriteJson = Callable[[str, Any], Path]
 
 
 @pytest.fixture
-def logs_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """カレントディレクトリを一時ディレクトリに切り替え、空の logs ディレクトリを用意します。"""
-    monkeypatch.chdir(tmp_path)
+def logs_dir(tmp_path: Path) -> Path:
+    """合成データを置くための空の logs ディレクトリを用意します。"""
     path = tmp_path / "logs"
     path.mkdir()
     return path

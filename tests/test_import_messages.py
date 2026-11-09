@@ -50,7 +50,6 @@ def test_read_latest_file_ignores_files_without_date_names(write_json: WriteJson
 
     messages = read_latest_file()
 
-    assert messages is not None
     assert [message["text"] for message in messages] == ["日付付きのファイル"]
 
 
@@ -59,11 +58,28 @@ def test_read_latest_file_accepts_another_channel_directory(write_json: WriteJso
 
     messages = read_latest_file(str(logs_dir / "random"))
 
-    assert messages is not None
     assert [message["text"] for message in messages] == ["random のメッセージ"]
 
 
 @pytest.mark.usefixtures("logs_dir")
-def test_read_latest_file_returns_none_when_directory_is_missing(capsys: pytest.CaptureFixture[str]) -> None:
-    assert read_latest_file() is None
+def test_read_latest_file_returns_empty_list_when_directory_is_missing(capsys: pytest.CaptureFixture[str]) -> None:
+    assert read_latest_file() == []
     assert "./logs/general not found." in capsys.readouterr().out
+
+
+def test_read_latest_file_returns_empty_list_when_no_dated_file_exists(
+    write_json: WriteJson, logs_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_json("general/notes.json", [{"text": "日付ではないファイル"}])
+
+    assert read_latest_file(str(logs_dir / "general")) == []
+    assert "No dated JSON files" in capsys.readouterr().out
+
+
+def test_read_latest_file_returns_empty_list_when_path_is_a_file(
+    write_json: WriteJson, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = write_json("general", [])
+
+    assert read_latest_file(str(path)) == []
+    assert "is not a directory" in capsys.readouterr().out

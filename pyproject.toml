@@ -1,10 +1,17 @@
 [project]
 name = "slalog-lab"
 version = "0.1.0"
-description = "Slack からエクスポートしたワークスペースのデータを Python で読み解く実験的スクリプト集です。"
+description = "Slack からエクスポートしたワークスペースのデータを Python で読み解く実験的なコマンドラインツールです。"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+
+[project.scripts]
+slalog = "slalog.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
@@ -14,8 +21,8 @@ dev = [
     "ruff>=0.17.4",
 ]
 
-[tool.uv]
-package = false
+[tool.uv.build-backend]
+module-name = "slalog"
 
 [tool.ruff]
 line-length = 120
@@ -45,15 +52,14 @@ strict = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
 addopts = ["-ra", "--strict-markers", "--strict-config", "--cov", "--cov-report=term-missing"]
 xfail_strict = true
 
 [tool.coverage.run]
 branch = true
-source = ["."]
-omit = ["tests/*", ".venv/*"]
+source_pkgs = ["slalog"]
+# `python -m slalog` をサブプロセスで起動するテストもカバレッジに含めます。
+patch = ["subprocess"]
 
 [tool.coverage.report]
-fail_under = 90
-exclude_also = ['if __name__ == .__main__.:']
+fail_under = 95

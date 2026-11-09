@@ -98,6 +98,7 @@ slalog [--logs-dir DIR] {users,channels,messages} ...
 - ベースイメージ(`python:3.15-slim`、`ghcr.io/astral-sh/uv`)はダイジェストで固定しています。
 - コンテナは UID 10001 の非 root ユーザーで動き、環境変数 `SLALOG_LOGS_DIR=/logs` を既定にしています。Linux ホストでは、`logs/` 配下のファイルとディレクトリをほかのユーザーからも読み取れる権限(例: `chmod -R a+rX logs`)にしてください。
 - `compose.yaml` では、ネットワーク無し・読み取り専用のルートファイルシステム・全ケーパビリティ削除・`no-new-privileges` を指定しています。
+- 実行用イメージのビルド時に Debian のセキュリティ更新を適用しています。
 - `.dockerignore` で `logs/`・`.git`・`.venv`・テストなどをビルドコンテキストから除外しています。
 
 ## Lint・型検査・テスト
@@ -110,3 +111,13 @@ uv run pytest
 ```
 
 テストは `tests/` 配下にあり、合成データだけを使います。実際のエクスポートデータは使いません。
+
+## CI とセキュリティ
+
+| 仕組み | 内容 |
+| --- | --- |
+| CI(`.github/workflows/ci.yml`) | PR・`main` への push・毎週月曜に実行します。Ruff・mypy、Python 3.12〜3.15 の pytest、zizmor によるワークフロー検査、hadolint・イメージのビルド・合成データでのスモークテスト・grype によるイメージスキャン(修正版のある High 以上で失敗)を行います。 |
+| CodeQL(`.github/workflows/codeql.yml`) | PR・`main` への push・毎週月曜に、Python と GitHub Actions のコードを解析します。 |
+| Dependabot(`.github/dependabot.yml`) | uv・GitHub Actions・Docker ベースイメージの更新 PR を毎週作成します。公開から 7 日経過した版だけを対象にします。 |
+
+ワークフローで使うアクションはコミット SHA で、Docker イメージはダイジェストで固定しています。ワークフローの権限は必要最小限にしています。

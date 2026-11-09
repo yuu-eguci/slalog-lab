@@ -57,3 +57,20 @@ jobs:
         run: uv sync
       - name: pytest を実行します
         run: uv run pytest
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: hadolint で Dockerfile を検査します
+        run: docker run --rm -i hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d < Dockerfile
+      - name: compose.yaml を検証します
+        run: docker compose config --quiet
+      - name: イメージをビルドします
+        run: docker build --tag slalog-lab:ci .
+      - name: 合成データでスモークテストを実行します
+        run: scripts/docker-smoke-test.sh slalog-lab:ci

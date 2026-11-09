@@ -5,7 +5,7 @@ Slalog Lab
 
 | 項目 | 状態 |
 | --- | --- |
-| Docker | 未対応です(ローカルの uv 環境で実行します) |
+| Docker | 対応しています(`Dockerfile` + `compose.yaml`。Python 3.15-slim ベース、非 root・読み取り専用・ネットワーク無しで実行します) |
 | 言語 | Python 3.12 以上(CI では 3.12 / 3.13 / 3.14 / 3.15 を検証しています) |
 | パッケージ管理 | [uv](https://docs.astral.sh/uv/)(`pyproject.toml` + `uv.lock`) |
 | Linter / Formatter | Ruff(lint・format)、mypy(strict) |
@@ -14,14 +14,9 @@ Slalog Lab
 
 ## クイックスタート
 
-1. [uv](https://docs.astral.sh/uv/getting-started/installation/) をインストールします。
-2. 依存関係をインストールします。
+### Docker で実行する場合
 
-    ```bash
-    uv sync
-    ```
-
-3. Slack からエクスポートした ZIP を展開し、リポジトリ直下の `logs/` に配置します(`logs/` は Git の管理対象外です)。
+1. Slack からエクスポートした ZIP を展開し、リポジトリ直下の `logs/` に配置します(`logs/` は Git の管理対象外で、Docker イメージにも含めません)。
 
     ```text
     logs/
@@ -32,7 +27,30 @@ Slalog Lab
         └── 2023-08-02.json
     ```
 
-4. `slalog` コマンドを実行します。
+2. イメージをビルドします。
+
+    ```bash
+    docker compose build
+    ```
+
+3. `slalog` コマンドを実行します。`logs/` はコンテナの `/logs` に読み取り専用でマウントされます。
+
+    ```bash
+    docker compose run --rm slalog users
+    docker compose run --rm slalog channels
+    docker compose run --rm slalog messages --channel general
+    ```
+
+### uv で実行する場合
+
+1. [uv](https://docs.astral.sh/uv/getting-started/installation/) をインストールします。
+2. 依存関係をインストールします。
+
+    ```bash
+    uv sync
+    ```
+
+3. 上記と同じ構成で `logs/` にエクスポートデータを配置し、`slalog` コマンドを実行します。
 
     ```bash
     uv run slalog users
@@ -73,6 +91,14 @@ slalog [--logs-dir DIR] {users,channels,messages} ...
 
 - 欠けている項目は `null` として出力します。`profile` を持たない(またはオブジェクトではない)ユーザーは、プロフィールの各項目を `null` にします。
 - ファイルやディレクトリが見つからない場合、JSON が壊れている場合、日付形式のファイルが無い場合は、標準エラー出力に理由を表示して終了コード 1 で終了します。
+
+## Docker イメージについて
+
+- `Dockerfile` はマルチステージ構成です。ビルド用ステージで uv により `uv.lock` どおりに依存を入れ、実行用ステージには仮想環境だけをコピーします。
+- ベースイメージ(`python:3.15-slim`、`ghcr.io/astral-sh/uv`)はダイジェストで固定しています。
+- コンテナは UID 10001 の非 root ユーザーで動き、環境変数 `SLALOG_LOGS_DIR=/logs` を既定にしています。Linux ホストでは、`logs/` 配下のファイルとディレクトリをほかのユーザーからも読み取れる権限(例: `chmod -R a+rX logs`)にしてください。
+- `compose.yaml` では、ネットワーク無し・読み取り専用のルートファイルシステム・全ケーパビリティ削除・`no-new-privileges` を指定しています。
+- `.dockerignore` で `logs/`・`.git`・`.venv`・テストなどをビルドコンテキストから除外しています。
 
 ## Lint・型検査・テスト
 

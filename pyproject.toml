@@ -1,0 +1,59 @@
+[project]
+name = "slalog-lab"
+version = "0.1.0"
+description = "Slack からエクスポートしたワークスペースのデータを Python で読み解く実験的スクリプト集です。"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.4",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "A", "C4", "C90", "SIM", "PT", "PTH", "RET", "PL", "RUF", "S", "T20",
+]
+ignore = [
+    # CLI スクリプトとして標準出力へ結果を表示するため、print / pprint を許可します。
+    "T201", "T203",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# テストでは assert を使うため、S101 を除外します。
+"tests/**" = ["S101", "PLR2004"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.mypy]
+files = ["."]
+exclude = ["^\\.venv/"]
+python_version = "3.12"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = ["-ra", "--strict-markers", "--strict-config", "--cov", "--cov-report=term-missing"]
+xfail_strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = ["tests/*", ".venv/*"]
+
+[tool.coverage.report]
+fail_under = 90
+exclude_also = ['if __name__ == .__main__.:']

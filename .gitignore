@@ -143,3 +143,5 @@ my-images/*
 *.hdf5
 
 logs/
+
+.ruff_cache/

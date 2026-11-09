@@ -5,10 +5,13 @@ from pprint import pprint
 from typing import Any
 
 
-def read_latest_file(path: str = "./logs/general") -> list[dict[str, Any]] | None:
+def read_latest_file(path: str = "./logs/general") -> list[dict[str, Any]]:
     if not Path(path).exists():
         print(f"{path} not found.")
-        return None
+        return []
+    if not Path(path).is_dir():
+        print(f"{path} is not a directory.")
+        return []
 
     # 一番新しいファイルを見つける
     files = []
@@ -19,6 +22,10 @@ def read_latest_file(path: str = "./logs/general") -> list[dict[str, Any]] | Non
                 files.append(f)
             except ValueError:
                 continue
+
+    if not files:
+        print(f"No dated JSON files in {path}.")
+        return []
 
     latest_file = max(files, key=lambda x: datetime.strptime(x.stem, "%Y-%m-%d"))
     with latest_file.open(encoding="utf-8") as file:
@@ -44,5 +51,4 @@ def read_latest_file(path: str = "./logs/general") -> list[dict[str, Any]] | Non
 
 if __name__ == "__main__":
     messages = read_latest_file()
-    if messages:
-        pprint(messages)
+    pprint(messages)

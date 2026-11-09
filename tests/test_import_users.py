@@ -69,3 +69,18 @@ def test_read_users_fills_missing_fields_with_none(write_json: WriteJson) -> Non
 def test_read_users_returns_empty_list_when_file_is_missing(capsys: pytest.CaptureFixture[str]) -> None:
     assert read_users() == []
     assert "./logs/users.json not found." in capsys.readouterr().out
+
+
+def test_read_users_treats_missing_profile_as_empty(write_json: WriteJson) -> None:
+    write_json("users.json", [{"id": "B0000000001", "name": "bot", "profile": None}, {"id": "B0000000002"}])
+
+    users = read_users()
+
+    empty_profile = {
+        "real_name": None,
+        "real_name_normalized": None,
+        "display_name": None,
+        "display_name_normalized": None,
+        "image_48": None,
+    }
+    assert [user["profile"] for user in users] == [empty_profile, empty_profile]

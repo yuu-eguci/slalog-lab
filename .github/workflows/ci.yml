@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # 新たに公開された脆弱性を検出するため、毎週月曜 9:00(JST)にも実行します。
+    - cron: "0 0 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -36,6 +39,10 @@ jobs:
         run: uv run ruff format --check
       - name: mypy で型検査します
         run: uv run mypy
+      - name: zizmor でワークフローを検査します
+        run: uvx zizmor@1.32.0 --format=github .
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   test:
     name: テスト (Python ${{ matrix.python-version }})
@@ -74,3 +81,8 @@ jobs:
         run: docker build --tag slalog-lab:ci .
       - name: 合成データでスモークテストを実行します
         run: scripts/docker-smoke-test.sh slalog-lab:ci
+      - name: grype でイメージの脆弱性を検査します
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          anchore/grype:v0.118.0@sha256:8a93fc48da96bd6ec5981279d099b69de11541dc68fdf222fb9161f8ff284af7
+          slalog-lab:ci --only-fixed --fail-on high

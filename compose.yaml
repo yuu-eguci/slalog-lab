@@ -1,0 +1,12 @@
+services:
+  slalog:
+    build: .
+    # エクスポートデータは読み取り専用でマウントし、コンテナからは外部と通信しません。
+    volumes:
+      - ./logs:/logs:ro
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

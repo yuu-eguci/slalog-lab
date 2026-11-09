@@ -18,12 +18,14 @@ def read_users() -> list[dict[str, object | None]]:
         team_id = user.get("team_id")
         name = user.get("name")
         real_name = user.get("real_name")
+        # bot などプロフィールを持たないユーザーもいるため、空のプロフィールとして扱います。
+        user_profile = user.get("profile") or {}
         profile = {
-            "real_name": user["profile"].get("real_name"),
-            "real_name_normalized": user["profile"].get("real_name_normalized"),
-            "display_name": user["profile"].get("display_name"),
-            "display_name_normalized": user["profile"].get("display_name_normalized"),
-            "image_48": user["profile"].get("image_48"),
+            "real_name": user_profile.get("real_name"),
+            "real_name_normalized": user_profile.get("real_name_normalized"),
+            "display_name": user_profile.get("display_name"),
+            "display_name_normalized": user_profile.get("display_name_normalized"),
+            "image_48": user_profile.get("image_48"),
         }
 
         result.append(

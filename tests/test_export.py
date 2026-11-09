@@ -64,9 +64,12 @@ class TestLoadUsers:
         ]
 
     def test_treats_missing_profile_as_empty(self, write_json: WriteJson, logs_dir: Path) -> None:
-        write_json("users.json", [{"id": "B0000000001", "profile": None}, {"id": "B0000000002"}])
+        write_json(
+            "users.json",
+            [{"id": "B0000000001", "profile": None}, {"id": "B0000000002"}, {"id": "B0000000003", "profile": "不正"}],
+        )
 
-        assert [user["profile"] for user in load_users(logs_dir)] == [EMPTY_PROFILE, EMPTY_PROFILE]
+        assert [user["profile"] for user in load_users(logs_dir)] == [EMPTY_PROFILE, EMPTY_PROFILE, EMPTY_PROFILE]
 
     def test_raises_when_file_is_missing(self, logs_dir: Path) -> None:
         with pytest.raises(ExportDataError, match=r"users\.json が見つかりません"):

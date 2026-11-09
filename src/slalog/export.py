@@ -49,8 +49,10 @@ def load_users(logs_dir: Path) -> list[User]:
     """users.json からユーザーの一覧を読み込みます。"""
     users: list[User] = []
     for user in _read_records(logs_dir / "users.json"):
-        # bot などプロフィールを持たないユーザーもいるため、空のプロフィールとして扱います。
-        profile = user.get("profile") or {}
+        # bot などプロフィールを持たないユーザーもいるため、オブジェクト以外は空のプロフィールとして扱います。
+        profile = user.get("profile")
+        if not isinstance(profile, dict):
+            profile = {}
         users.append(
             {
                 "id": user.get("id"),

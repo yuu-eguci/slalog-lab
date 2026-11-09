@@ -150,3 +150,14 @@ def test_exits_quietly_when_pipe_is_closed(write_json: WriteJson, logs_dir: Path
 
     assert "Traceback" not in stderr
     assert "BrokenPipeError" not in stderr
+
+
+def test_writes_to_stdout_that_cannot_be_reconfigured(
+    write_json: WriteJson, logs_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_json("channels.json", [{"id": "C0000000001", "name": "general"}])
+    output = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", output)
+
+    assert main(["--logs-dir", str(logs_dir), "channels"]) == 0
+    assert json.loads(output.getvalue())[0]["name"] == "general"

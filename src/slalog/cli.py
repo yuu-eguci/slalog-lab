@@ -58,7 +58,10 @@ def _write_json(result: object) -> int:
         # head などで出力が途中で閉じられた場合は、トレースバックを出さずに終了します。
         # 終了時の flush で再び例外にならないよう、標準出力を /dev/null に差し替えます。
         devnull = os.open(os.devnull, os.O_WRONLY)
-        os.dup2(devnull, sys.stdout.fileno())
+        try:
+            os.dup2(devnull, sys.stdout.fileno())
+        finally:
+            os.close(devnull)
         return EXIT_BROKEN_PIPE
     return 0
 

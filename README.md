@@ -96,7 +96,7 @@ slalog [--logs-dir DIR] {users,channels,messages} ...
 
 - `Dockerfile` はマルチステージ構成です。ビルド用ステージで uv により `uv.lock` どおりに依存を入れ、実行用ステージには仮想環境だけをコピーします。
 - ベースイメージ(`python:3.15-slim`、`ghcr.io/astral-sh/uv`)はダイジェストで固定しています。
-- コンテナは UID 10001 の非 root ユーザーで動き、環境変数 `SLALOG_LOGS_DIR=/logs` を既定にしています。
+- コンテナは UID 10001 の非 root ユーザーで動き、環境変数 `SLALOG_LOGS_DIR=/logs` を既定にしています。Linux ホストでは、`logs/` 配下のファイルとディレクトリをほかのユーザーからも読み取れる権限(例: `chmod -R a+rX logs`)にしてください。
 - `compose.yaml` では、ネットワーク無し・読み取り専用のルートファイルシステム・全ケーパビリティ削除・`no-new-privileges` を指定しています。
 - `.dockerignore` で `logs/`・`.git`・`.venv`・テストなどをビルドコンテキストから除外しています。
 

@@ -118,8 +118,11 @@ def load_messages(logs_dir: Path, channel: str, *, day: date | None = None, all_
 
 
 def _channel_dir(logs_dir: Path, channel: str) -> Path:
-    """チャンネル名からディレクトリを求めます。logs ディレクトリの外を指す名前は拒否します。"""
-    if channel in {"", ".", ".."} or "/" in channel or "\\" in channel:
+    """チャンネル名からディレクトリを求めます。
+
+    logs ディレクトリの外を指す名前(パス区切りや Windows のドライブ指定を含むもの)は拒否します。
+    """
+    if channel in {"", ".", ".."} or any(char in channel for char in "/\\:"):
         msg = f"チャンネル名が不正です: {channel!r}"
         raise ExportDataError(msg)
     channel_dir = logs_dir / channel
@@ -131,19 +134,33 @@ def _channel_dir(logs_dir: Path, channel: str) -> Path:
 
 def _dated_files(channel_dir: Path) -> list[Path]:
     """YYYY-MM-DD.json 形式のファイルを日付の昇順で返します。"""
+    try:
+        entries = list(channel_dir.iterdir())
+    except OSError as e:
+        msg = f"チャンネル {channel_dir.name} のディレクトリを読み込めません: {channel_dir} ({e.strerror})"
+        raise ExportDataError(msg) from e
     dated: list[tuple[date, Path]] = []
-    for file in channel_dir.iterdir():
-        if file.suffix != ".json":
-            continue
-        try:
-            day = datetime.strptime(file.stem, DATE_FORMAT).date()
-        except ValueError:
-            continue
-        dated.append((day, file))
+    for file in entries:
+        day = _parse_dated_name(file.name)
+        if day is not None and file.is_file():
+            dated.append((day, file))
     if not dated:
         msg = f"{channel_dir} に日付形式の JSON ファイルがありません。"
         raise ExportDataError(msg)
     return [file for _, file in sorted(dated)]
+
+
+def _parse_dated_name(name: str) -> date | None:
+    """YYYY-MM-DD.json(月・日はゼロ埋め)という名前なら日付を返し、それ以外は None を返します。"""
+    stem, dot, suffix = name.rpartition(".")
+    if not dot or suffix != "json":
+        return None
+    try:
+        day = datetime.strptime(stem, DATE_FORMAT).date()
+    except ValueError:
+        return None
+    # strptime はゼロ埋めの無い 2023-8-9 なども受け付けるため、書式どおりかを確認します。
+    return day if day.strftime(DATE_FORMAT) == stem else None
 
 
 def _read_records(file: Path) -> list[dict[str, Any]]:
@@ -154,6 +171,9 @@ def _read_records(file: Path) -> list[dict[str, Any]]:
     except FileNotFoundError:
         msg = f"{file.name} が見つかりません: {file}"
         raise ExportDataError(msg) from None
+    except OSError as e:
+        msg = f"{file.name} を読み込めません: {file} ({e.strerror})"
+        raise ExportDataError(msg) from e
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         msg = f"{file.name} を JSON として読み込めません: {e}"
         raise ExportDataError(msg) from e

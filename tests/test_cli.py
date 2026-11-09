@@ -1,5 +1,6 @@
 """slalog.cli のテストです。"""
 
+import io
 import json
 import subprocess
 import sys
@@ -117,3 +118,46 @@ def test_runs_as_module(write_json: WriteJson, logs_dir: Path) -> None:
     )
 
     assert json.loads(result.stdout)[0]["name"] == "general"
+
+
+def test_writes_utf8_even_if_stdout_uses_another_encoding(
+    write_json: WriteJson, logs_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_json("channels.json", [{"id": "C0000000001", "name": "絵文字🎉"}])
+    buffer = io.BytesIO()
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(buffer, encoding="cp932"))
+
+    assert main(["--logs-dir", str(logs_dir), "channels"]) == 0
+
+    sys.stdout.flush()
+    assert json.loads(buffer.getvalue().decode("utf-8"))[0]["name"] == "絵文字🎉"
+
+
+def test_exits_quietly_when_pipe_is_closed(write_json: WriteJson, logs_dir: Path) -> None:
+    write_json("general/2023-08-01.json", [{"text": f"メッセージ {i}" * 10} for i in range(3000)])
+
+    with subprocess.Popen(  # noqa: S603
+        [sys.executable, "-m", "slalog", "--logs-dir", str(logs_dir), "messages"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) as process:
+        assert process.stdout is not None
+        assert process.stderr is not None
+        process.stdout.read(1)
+        process.stdout.close()
+        stderr = process.stderr.read().decode("utf-8")
+        process.wait(timeout=30)
+
+    assert "Traceback" not in stderr
+    assert "BrokenPipeError" not in stderr
+
+
+def test_writes_to_stdout_that_cannot_be_reconfigured(
+    write_json: WriteJson, logs_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_json("channels.json", [{"id": "C0000000001", "name": "general"}])
+    output = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", output)
+
+    assert main(["--logs-dir", str(logs_dir), "channels"]) == 0
+    assert json.loads(output.getvalue())[0]["name"] == "general"

@@ -1,5 +1,6 @@
 """slalog.export のテストです。"""
 
+import os
 from datetime import date
 from pathlib import Path
 
@@ -207,3 +208,63 @@ class TestLoadMessages:
     def test_rejects_channel_names_that_escape_logs_dir(self, logs_dir: Path, channel: str) -> None:
         with pytest.raises(ExportDataError, match="チャンネル名が不正です"):
             load_messages(logs_dir, channel)
+
+
+class TestFileSystemErrors:
+    def test_raises_when_logs_dir_is_a_file(self, tmp_path: Path) -> None:
+        archive = tmp_path / "export.zip"
+        archive.write_bytes(b"PK")
+
+        with pytest.raises(ExportDataError, match=r"users\.json を読み込めません"):
+            load_users(archive)
+
+    def test_raises_when_json_path_is_a_directory(self, logs_dir: Path) -> None:
+        (logs_dir / "channels.json").mkdir()
+
+        with pytest.raises(ExportDataError, match=r"channels\.json を読み込めません"):
+            load_channels(logs_dir)
+
+    @pytest.mark.skipif(
+        os.name != "posix" or os.geteuid() == 0, reason="POSIX の一般ユーザーでのみ権限を検証できます。"
+    )
+    def test_raises_when_file_is_not_readable(self, write_json: WriteJson, logs_dir: Path) -> None:
+        path = write_json("users.json", [])
+        path.chmod(0)
+        try:
+            with pytest.raises(ExportDataError, match=r"users\.json を読み込めません"):
+                load_users(logs_dir)
+        finally:
+            path.chmod(0o644)
+
+    @pytest.mark.skipif(
+        os.name != "posix" or os.geteuid() == 0, reason="POSIX の一般ユーザーでのみ権限を検証できます。"
+    )
+    def test_raises_when_channel_directory_is_not_readable(self, write_json: WriteJson, logs_dir: Path) -> None:
+        write_json("general/2023-08-01.json", [])
+        channel_dir = logs_dir / "general"
+        channel_dir.chmod(0)
+        try:
+            with pytest.raises(ExportDataError, match="チャンネル general のディレクトリを読み込めません"):
+                load_messages(logs_dir, "general")
+        finally:
+            channel_dir.chmod(0o755)
+
+
+class TestDatedFileNames:
+    def test_ignores_names_without_zero_padding(self, write_json: WriteJson, logs_dir: Path) -> None:
+        write_json("general/2023-08-01.json", [{"text": "ゼロ埋めあり"}])
+        write_json("general/2023-8-9.json", [{"text": "ゼロ埋めなし"}])
+
+        assert [message["text"] for message in load_messages(logs_dir, "general", all_dates=True)] == ["ゼロ埋めあり"]
+
+    def test_ignores_directories_with_date_names(self, write_json: WriteJson, logs_dir: Path) -> None:
+        write_json("general/2023-08-01.json", [{"text": "ファイル"}])
+        (logs_dir / "general" / "2023-08-05.json").mkdir()
+
+        assert [message["text"] for message in load_messages(logs_dir, "general")] == ["ファイル"]
+
+
+@pytest.mark.parametrize("channel", ["C:foo", "general:1"])
+def test_rejects_channel_names_with_drive_or_colon(logs_dir: Path, channel: str) -> None:
+    with pytest.raises(ExportDataError, match="チャンネル名が不正です"):
+        load_messages(logs_dir, channel)
